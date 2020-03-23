@@ -46,6 +46,24 @@ int xMax, yMax, x, y;
 /* * * * * * * * * * BUZZER * * * * * * * * * */
 int BUZZER_PIN = A2;
 
+/* * * * * * * * * * HAND WASHING THRESHOLDS * * * * * * * * * */
+int WASH_TIME = 20000; // Wash hands for at least this amount of time (At least 20 seconds)
+int FAUCET_ON = 80;   // Minimum moisture reading when washing hands (Scale 0-100)
+int FAUCET_OFF = 55;  // Max moisture reading when faucet is off and not washing hands
+
+// Timing variables
+int startWash = 0;
+int currentTime;
+int currentWashTime;
+int increment = 0;
+
+// Alarm/buzzer variables
+int buzzerBegin;
+int buzzerCurrent;
+bool stopFlag = false;
+int stoppedWashing;
+int currentStoppedWashing = 0;
+
 void setup() {
   Wire.begin();
   Wireling.begin();
@@ -68,24 +86,6 @@ void setup() {
   
 }
 
-// Hand washing thresholds
-int WASH_TIME = 5000; // Wash hands for at least this amount of time (At least 20 seconds)
-int FAUCET_ON = 50;   // Minmum moisture reading when washing hands
-int FAUCET_OFF = 20;  // Max moisture reading when faucet is off and not washing hands
-
-// Timing variables
-int startWash = 0;
-int currentTime;
-int currentWashTime;
-int increment = 0;
-
-// Alarm/buzzer variables
-int buzzerBegin;
-int buzzerCurrent;
-bool stopFlag = false;
-int stoppedWashing;
-int currentStoppedWashing = 0;
-
 void loop() {
   Wireling.selectPort(MOISTURE_PORT);
   SerialMonitorInterface.print("M: ");
@@ -105,7 +105,7 @@ void loop() {
   else{ // Faucet on
     currentTime = millis();
     currentWashTime = currentTime - startWash - currentStoppedWashing;
-    SerialUSB.print("current wash time:"); SerialUSB.println(currentWashTime);
+//    SerialUSB.print("current wash time:"); SerialUSB.println(currentWashTime);
     
     if(WASH_TIME > currentWashTime){ // Haven't been washing hands for long enough
       Wireling.selectPort(DISPLAY_PORT);
@@ -138,8 +138,11 @@ void loop() {
       screenBuffer.setCursor(x, y);
       screenBuffer.print("All done! <3");
       display.writeBuffer(screenBuffer.getBuffer(), screenBuffer.getBufferSize());
-      delay(1500);
-
+      delay(5000); // display done message
+      screenBuffer.clear(); // keep screen off while hands aren't being washed
+      display.writeBuffer(screenBuffer.getBuffer(), screenBuffer.getBufferSize());
+      delay(30000); // So that if you continue washing your hands, it doesn't reactivate
+      
       startWash = 0;
       stopFlag = false;
       currentStoppedWashing = 0;
