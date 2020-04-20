@@ -56,10 +56,18 @@ bool write_once_cali_flag = false;
 
 bool animation_on = false; // Used to display certain animations at correct times
 
+// Make Serial Monitor compatible for all TinyCircuits processors
+#if defined(ARDUINO_ARCH_AVR)
+  #define SerialMonitorInterface Serial
+#elif defined(ARDUINO_ARCH_SAMD)
+  #define SerialMonitorInterface SerialUSB
+#endif
+
+
 void setup(void) {
   Wire.begin(); //initialize I2C before we can initialize TinyScreen- not needed for TinyScreen+
   display.begin();
-  SerialUSB.begin(9600);
+  SerialMonitorInterface.begin(9600);
   
   display.setBrightness(10);
 
@@ -108,8 +116,8 @@ void loop() {
     HandleMostureReading(moistness);
   
     // Press button by power switch to start sensor cailbration or enter c
-    if(display.getButtons(TSButtonUpperRight) || (SerialUSB.available() > 0 && SerialUSB.read() == 'c')){
-      SerialUSB.println("\nCalibration started!\n");
+    if(display.getButtons(TSButtonUpperRight) || (SerialMonitorInterface.available() > 0 && SerialMonitorInterface.read() == 'c')){
+      SerialMonitorInterface.println("\nCalibration started!\n");
       calibration_flag++;
       write_once_cali_flag = false;
       
@@ -120,7 +128,7 @@ void loop() {
 
   // Handle the calibration steps
   if(calibration_flag >= 1){
-    if(display.getButtons(TSButtonUpperRight|TSButtonUpperLeft|TSButtonLowerRight|TSButtonLowerLeft) || (SerialUSB.available() > 0 && SerialUSB.read() == 'n')){
+    if(display.getButtons(TSButtonUpperRight|TSButtonUpperLeft|TSButtonLowerRight|TSButtonLowerLeft) || (SerialMonitorInterface.available() > 0 && SerialMonitorInterface.read() == 'n')){
       calibration_flag++; // Move on to next stwp of calibration
       write_once_cali_flag = false;
       
@@ -155,13 +163,13 @@ void HandleMostureReading(float offset_moisture_reading){
 
   // Display plant status to the serial monitor
   if(!animation_on){
-    SerialUSB.print("Plant is -> IDLE | Moisture level = ");
+    SerialMonitorInterface.print("Plant is -> IDLE | Moisture level = ");
   }else{
-    SerialUSB.print("Plant is -> HYDRATING | Moisture level = ");
+    SerialMonitorInterface.print("Plant is -> HYDRATING | Moisture level = ");
   }
 
   // Display the moisture level to the serial monitor
-  SerialUSB.println(avg_moistness);
+  SerialMonitorInterface.println(avg_moistness);
 
   // Looks like a big jump, turn on animation and clear idle animation
   if(avg_moistness - avg_moistness_last > 0.1){
@@ -228,7 +236,7 @@ void CalibrateMoisutreSensor(){
       display.fontColor(TS_8b_Red, TS_8b_Black);
       display.println("(hold by wire only!)");
       display.fontColor(TS_8b_Green, TS_8b_Black);
-      SerialUSB.println("Hold the sensor in the AIR and press any button or enter 'n' (hold by the wire only!)");
+      SerialMonitorInterface.println("Hold the sensor in the AIR and press any button or enter 'n' (hold by the wire only!)");
       write_once_cali_flag = true;
     break;
     case 2:
@@ -236,10 +244,10 @@ void CalibrateMoisutreSensor(){
       display.clearScreen();
       display.setCursor(0, 0);
       display.println("Keep holding");
-      SerialUSB.println("Keep holding the sensor");
+      SerialMonitorInterface.println("Keep holding the sensor");
       display.setCursor(0, 10);
       display.println("Taking readings...");
-      SerialUSB.println("Taking readings...");
+      SerialMonitorInterface.println("Taking readings...");
     
       // Take the dry readings
       moist_readings_sum = 0;
@@ -258,10 +266,10 @@ void CalibrateMoisutreSensor(){
       display.clearScreen();
       display.setCursor(0, 0);
       display.println("Dry readings done");
-      SerialUSB.println("Dry readings done");
+      SerialMonitorInterface.println("Dry readings done");
       display.setCursor(0, 20);
       display.println("offset = " + String(offset));
-      SerialUSB.println("offset = " + String(offset));
+      SerialMonitorInterface.println("offset = " + String(offset));
       delay(2000);
       write_once_cali_flag = true;
     
@@ -276,17 +284,17 @@ void CalibrateMoisutreSensor(){
       display.println("and press any");
       display.setCursor(0, 20);
       display.println("button");
-      SerialUSB.println("Submerge the sensor in WATER and press any button or enter 'n'");
+      SerialMonitorInterface.println("Submerge the sensor in WATER and press any button or enter 'n'");
       write_once_cali_flag = true;
     break;
     case 3:
       display.clearScreen();
       display.setCursor(0, 0);
       display.println("Keep holding");
-      SerialUSB.println("Keep holding the sensor");
+      SerialMonitorInterface.println("Keep holding the sensor");
       display.setCursor(0, 10);
       display.println("Taking readings...");
-      SerialUSB.println("Taking readings...");
+      SerialMonitorInterface.println("Taking readings...");
     
       // Take the submerged readings
       moist_readings_sum = 0;
@@ -312,7 +320,7 @@ void CalibrateMoisutreSensor(){
         display.setCursor(0, 30);
         display.fontColor(TS_8b_Green, TS_8b_Black);
         display.println("Set to defaults...");
-        SerialUSB.println("The range is not big enough! Setting offset and range back to defaults");
+        SerialMonitorInterface.println("The range is not big enough! Setting offset and range back to defaults");
     
         // Give an extra second to read error
         delay(1000);
@@ -323,10 +331,10 @@ void CalibrateMoisutreSensor(){
         display.clearScreen();
         display.setCursor(0, 0);
         display.println("Wet readings done");
-        SerialUSB.println("Wet readings done");
+        SerialMonitorInterface.println("Wet readings done");
         display.setCursor(0, 20);
         display.println("range = " + String(range));
-        SerialUSB.println("range = " + String(range));
+        SerialMonitorInterface.println("range = " + String(range));
       }
     
       // Delay so last button press doesn't register right away and to give time to read
